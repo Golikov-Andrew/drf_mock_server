@@ -1,0 +1,9 @@
+Django
+djangorestframework
+djangorestframework-simplejwt
+django-debug-toolbar
+python-dotenv
+psycopg2-binary
+django-filter
+drf_yasg
+django-cors-headers

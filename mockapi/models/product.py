@@ -1,0 +1,23 @@
+from django.db import models
+from django.urls import reverse
+
+
+class Product(models.Model):
+    title = models.CharField(max_length=150, default='Product')
+    description = models.TextField(blank=True)
+    image_url = models.TextField(blank=True)
+    # categories = models.ManyToManyField(Category, related_name='products', blank=True)
+    black_price = models.FloatField(blank=True, default=12000)
+    final_price = models.FloatField(default=10000)
+    quantity = models.PositiveIntegerField(default=0)
+
+    def __str__(self):
+        return self.title
+
+    def get_absolute_url(self):
+        return reverse('product_detail', kwargs={'pk': self.pk})
+
+    class Meta:
+        verbose_name = 'Product'
+        verbose_name_plural = 'Products'
+        # ordering = ['pk', 'title']

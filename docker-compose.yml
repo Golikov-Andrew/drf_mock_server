@@ -1,0 +1,39 @@
+services:
+  my_mock_db:
+    container_name: my_mock_db_container
+    image: postgres:14
+    restart: always
+    environment:
+      POSTGRES_DB: "${MOCK_DATABASE_DTBS}"
+      POSTGRES_USER: "${MOCK_DATABASE_USER}"
+      POSTGRES_PASSWORD: "${MOCK_DATABASE_PSWD}"
+      PGDATA: "/var/lib/postgresql/data/pgdata"
+    ports:
+     - "5469:5432"
+    volumes:
+      - ./data:/var/lib/postgresql/data
+    networks:
+      - my_mock_server_network
+    
+  my_mock_server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    environment:
+      POSTGRES_DB: "${MOCK_DATABASE_DTBS}"
+      POSTGRES_USER: "${MOCK_DATABASE_USER}"
+      POSTGRES_PASSWORD: "${MOCK_DATABASE_PSWD}"
+    depends_on:
+      - my_mock_db
+    ports:
+      - "62417:8000"
+    command: python3 /usr/src/my_mock_server/manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/usr/src/my_mock_server
+    networks:
+      - my_mock_server_network
+
+networks:
+  my_mock_server_network:
+    driver: bridge
