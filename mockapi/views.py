@@ -4,6 +4,7 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework import pagination, serializers, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView, \
     TokenRefreshView, TokenVerifyView, TokenBlacklistView
 
@@ -31,9 +32,33 @@ class UserRegistrationView(APIView):
 
 
 class CustomPagination(pagination.PageNumberPagination):
-    page_size = 5
+    page_size = 8
     page_size_query_param = 'limit'
     max_page_size = 20
+
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        token['is_admin'] = user.is_staff
+        return token
+
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        tokens = serializer.validated_data
+
+        response_data = {
+            'access': tokens['access'],
+            'refresh': tokens['refresh'],
+            'is_admin': serializer.user.is_staff,
+        }
+        return Response(response_data)
 
 
 class TokenObtainPairResponseSerializer(serializers.Serializer):
@@ -47,7 +72,7 @@ class TokenObtainPairResponseSerializer(serializers.Serializer):
         raise NotImplementedError()
 
 
-class DecoratedTokenObtainPairView(TokenObtainPairView):
+class DecoratedTokenObtainPairView(CustomTokenObtainPairView):
     @swagger_auto_schema(
         responses={
             status.HTTP_200_OK: TokenObtainPairResponseSerializer,

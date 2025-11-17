@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework import generics, permissions, status
+from rest_framework import generics, permissions, status, serializers
 from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 from rest_framework_simplejwt.authentication import JWTAuthentication
@@ -73,24 +73,58 @@ class UserAPIUpdate(generics.UpdateAPIView):
 #     example=[1, 2, 3]
 # )
 
+class SearchParamsSerializer(serializers.Serializer):
+    # page = serializers.IntegerField(required=False)
+    final_price__gte = serializers.IntegerField(required=False)
+    final_price__lte = serializers.IntegerField(required=False)
 
-class ProductAPIListCreate(generics.ListCreateAPIView):
+
+class ProductAPIList(generics.ListAPIView):
     serializer_class = ProductSerializer
     pagination_class = CustomPagination
     permission_classes = [permissions.AllowAny]
 
-    # authentication_classes = [JWTAuthentication]
 
     def get_queryset(self):
-        return Product.objects.all()
+        queryset = Product.objects.all()
+        search_params = self.request.GET
+        # try:
+        #     queryset = Product.objects.filter().all()
+        for key, value in search_params.items():
+            if key == 'page':
+                continue
+            queryset = queryset.filter(**{key: value})
 
-    def dispatch(self, request, *args, **kwargs):
-        response = super().dispatch(request, *args, **kwargs)
-        response['Access-Control-Allow-Origin'] = 'http://localhost:5173'
-        response['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE'
-        response[
-            'Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
-        return response
+        return queryset
+        # serializer = self.get_serializer(queryset, many=True)
+        # return Response(serializer.data, status=status.HTTP_200_OK)
+        # except Exception as e:
+        #     return Response({'error': str(e)},
+        #                     status=status.HTTP_400_BAD_REQUEST)
+
+    @swagger_auto_schema(query_serializer=SearchParamsSerializer)
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
+
+
+
+class ProductAPICreate(generics.CreateAPIView):
+    serializer_class = ProductSerializer
+    pagination_class = CustomPagination
+    permission_classes = [permissions.IsAuthenticated]
+
+    authentication_classes = [JWTAuthentication]
+
+    # def get_queryset(self):
+    #     return Product.objects.all()
+
+    # def dispatch(self, request, *args, **kwargs):
+    #     response = super().dispatch(request, *args, **kwargs)
+    #     response['Access-Control-Allow-Origin'] = 'http://localhost:3000'
+    #     response['Access-Control-Allow-Methods'] = 'OPTIONS, GET, POST, PUT, DELETE'
+    #     response[
+    #         'Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+    #     return response
 
 
 class ProductAPIRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
@@ -106,8 +140,9 @@ class ProductAPIRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
 class ProductAPISearch(generics.GenericAPIView):
     serializer_class = ProductSerializer
     parser_classes = [JSONParser]
-    permission_classes = [permissions.IsAuthenticated]
-    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.AllowAny]
+
+    # authentication_classes = [JWTAuthentication]
 
     def get_queryset(self):
         return Product.objects.all()
@@ -163,8 +198,7 @@ class ProductAPISearch(generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
         search_params = request.data
         try:
-            queryset = Product.objects.filter(
-                owner_id=self.request.user.id).all()
+            queryset = Product.objects.filter().all()
             for key, value in search_params.items():
                 queryset = queryset.filter(**{key: value})
             serializer = self.get_serializer(queryset, many=True)

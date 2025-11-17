@@ -37,10 +37,12 @@ ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '77.105.174.107']
 CSRF_TRUSTED_ORIGINS = ['http://localhost',
                         f'http://localhost:{MOCK_SERVER_PORT}',
                         f'http://localhost:5173',
+                        f'http://localhost:3000',
                         f'http://my_mock_server:{MOCK_SERVER_PORT}']
 CSRF_ALLOWED_ORIGINS = ['http://localhost',
                         f'http://localhost:{MOCK_SERVER_PORT}',
                         f'http://localhost:5173',
+                        f'http://localhost:3000',
                         f'http://my_mock_server:{MOCK_SERVER_PORT}']
 
 # Application definition
@@ -178,8 +180,8 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'UPDATE_LAST_LOGIN': True,
@@ -218,4 +220,7 @@ CORS_ALLOW_HEADERS = [
     "user-agent",
     "x-csrftoken",
     "x-requested-with",
+]
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000"
 ]
