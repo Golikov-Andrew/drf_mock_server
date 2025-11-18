@@ -1,6 +1,8 @@
 from django.db import models
 from django.urls import reverse
 
+from mockapi.models.attributes import Tag, Color
+
 
 class Product(models.Model):
     title = models.CharField(max_length=150, default='Product')
@@ -10,6 +12,8 @@ class Product(models.Model):
     black_price = models.FloatField(blank=True, default=12000)
     final_price = models.FloatField(default=10000)
     quantity = models.PositiveIntegerField(default=0)
+    tags = models.ManyToManyField(Tag, related_name='products', blank=True)
+    colors = models.ManyToManyField(Color, related_name='products', blank=True)
 
     def __str__(self):
         return self.title

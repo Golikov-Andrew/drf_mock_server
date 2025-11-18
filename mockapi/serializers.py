@@ -4,6 +4,8 @@ from rest_framework import serializers
 
 from .models.customer import Customer
 from .models.product import Product
+from .models.shop import Shop
+from .models.wishlist_item import WishListItem
 
 
 # from tudushnik.models.tag import Tag
@@ -124,3 +126,20 @@ class UserSerializerPost(serializers.ModelSerializer):
         customer = Customer(user=user)
         customer.save()
         return user
+
+
+class ShopSerializer(DefaultValueSerializerMixin,
+                     serializers.ModelSerializer):
+    class Meta:
+        model = Shop
+        fields = '__all__'
+
+
+class WishListSerializer(DefaultValueSerializerMixin,
+                         serializers.ModelSerializer):
+    product = ProductSerializer(read_only=True)
+
+    class Meta:
+        model = WishListItem
+        fields = ['product']
+

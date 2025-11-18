@@ -1,12 +1,12 @@
 from django.contrib.auth.models import User
 from django.db import models
 
+from mockapi.models.product import Product
+
 
 class Customer(models.Model):
-    # limit_items_per_page = models.IntegerField(default=5)
-    user = models.OneToOneField(User, on_delete=models.DO_NOTHING,
-                                 related_name='customer')
-
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='customer')
+    wishlist = models.ManyToManyField(Product, through='WishListItem', related_name='wishlists')
 
     class Meta:
         verbose_name = 'Customer'
