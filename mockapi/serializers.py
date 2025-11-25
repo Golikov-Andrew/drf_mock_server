@@ -1,10 +1,14 @@
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
+from django.utils.dateformat import DateFormat
 from rest_framework import serializers
 
+from .models.cart_item import CartItem
 from .models.customer import Customer
+from .models.order import Order
 from .models.product import Product
 from .models.shop import Shop
+from .models.statuses import OrderStatus, DeliveryStatus
 from .models.wishlist_item import WishListItem
 
 
@@ -143,3 +147,57 @@ class WishListSerializer(DefaultValueSerializerMixin,
         model = WishListItem
         fields = ['product']
 
+
+class CartSerializer(DefaultValueSerializerMixin,
+                     serializers.ModelSerializer):
+    product = ProductSerializer(read_only=True)
+
+    class Meta:
+        model = CartItem
+        fields = ['product', 'qty']
+
+
+class OrderStatusesSerializer(DefaultValueSerializerMixin,
+                              serializers.ModelSerializer):
+    class Meta:
+        model = OrderStatus
+        fields = ['title']
+
+
+class DeliveryStatusesSerializer(DefaultValueSerializerMixin,
+                                 serializers.ModelSerializer):
+    class Meta:
+        model = DeliveryStatus
+        fields = ['title']
+
+
+class OrderSerializer(DefaultValueSerializerMixin,
+                      serializers.ModelSerializer):
+    order_status_title = serializers.SerializerMethodField()
+    delivery_status_title = serializers.SerializerMethodField()
+    created_at = serializers.SerializerMethodField()
+    updated_at = serializers.SerializerMethodField()
+
+    def get_order_status_title(self, obj):
+        if obj.order_status:
+            return obj.order_status.title
+        return None
+
+    def get_delivery_status_title(self, obj):
+        if obj.delivery_status:
+            return obj.delivery_status.title
+        return None
+
+    def get_created_at(self, obj):
+        if obj.created_at:
+            return DateFormat(obj.created_at).format('Y-m-d H:i')
+        return None
+
+    def get_updated_at(self, obj):
+        if obj.updated_at:
+            return DateFormat(obj.updated_at).format('Y-m-d H:i')
+        return None
+
+    class Meta:
+        model = Order
+        fields = '__all__'

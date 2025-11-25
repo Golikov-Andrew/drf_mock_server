@@ -45,4 +45,25 @@ urlpatterns = [
     path('wishlist/remove/<int:product_id>/', api.WishListAPIDestroy.as_view(),
          name='wishlist_remove'),
 
+    path('cart/', api.CartAPIList.as_view(),
+         name='cart_list'),
+    path('cart/product/add/', api.CartAPIAddProduct.as_view(),
+         name='cart_product_add'),
+    path('cart/product/remove/<int:product_id>/', api.CartAPIRemoveProduct.as_view(),
+         name='cart_product_remove'),
+
+    path('order_statuses/', api.OrderStatusesAPIList.as_view(),
+         name='order_statuses_list'),
+    path('delivery_statuses/', api.DeliveryStatusesAPIList.as_view(),
+         name='delivery_statuses_list'),
+
+    path('cart/product/change-qty/', api.CartAPIChangeQtyItem.as_view(),
+         name='cart_product_change_qty'),
+
+    path('order/create/', api.OrderAPICreate.as_view(), name="order_create"),
+    path('orders/list/', api.OrdersAPIList.as_view(), name="orders_list")
+
+    # path('cart/product/remove/<int:product_id>/', api.CartAPIRemoveProduct.as_view(),
+    #      name='cart_product_remove'),
+
 ]

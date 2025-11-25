@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from django.contrib.auth.models import User
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
@@ -7,12 +9,16 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
+from mockapi.models.cart_item import CartItem
 from mockapi.models.customer import Customer
+from mockapi.models.order import Order
 from mockapi.models.product import Product
 from mockapi.models.shop import Shop
+from mockapi.models.statuses import OrderStatus, DeliveryStatus
 from mockapi.models.wishlist_item import WishListItem
 from mockapi.serializers import ProductSerializer, UserSerializer, \
-    UserSerializerPost, UserSerializerDetails, UserSerializerUpdate, ShopSerializer, WishListSerializer
+    UserSerializerPost, UserSerializerDetails, UserSerializerUpdate, ShopSerializer, WishListSerializer, CartSerializer, \
+    OrderStatusesSerializer, OrderSerializer
 from mockapi.views import CustomPagination
 
 
@@ -349,3 +355,228 @@ class WishListAPIDestroy(generics.DestroyAPIView):
             {'message': 'Товар успешно удалён из вишлиста'},
             status=status.HTTP_204_NO_CONTENT
         )
+
+
+class CartAPIList(generics.ListAPIView):
+    serializer_class = CartSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+
+    def get_queryset(self):
+        return CartItem.objects.filter(
+            customer=Customer.objects.get(user=self.request.user))
+
+
+class CartAPIAddProduct(generics.CreateAPIView):
+    serializer_class = CartSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+
+    #
+    def get_queryset(self):
+        return CartItem.objects.filter(
+            customer=Customer.objects.get(user=self.request.user))
+
+    def post(self, request, *args, **kwargs):
+
+        product_id = request.data.get('product_id')
+        customer_id = request.user.id
+
+        try:
+            product = Product.objects.get(id=product_id)
+        except Product.DoesNotExist:
+            return Response({'error': 'Товар не найден'}, status=status.HTTP_404_NOT_FOUND)
+
+        cart_item = CartItem.objects.filter(
+            customer_id=customer_id,
+            product_id=product_id
+        ).first()
+
+        if cart_item:
+            return Response({'error': 'Товар уже в корзине'}, status=status.HTTP_400_BAD_REQUEST)
+
+        cart_item = CartItem.objects.create(
+            customer_id=customer_id,
+            product=product
+        )
+
+        serializer = CartSerializer(cart_item)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class CartAPIRemoveProduct(generics.DestroyAPIView):
+    serializer_class = CartSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+
+    #
+    def get_queryset(self):
+        return CartItem.objects.filter(
+            customer=Customer.objects.get(user=self.request.user))
+
+    def delete(self, request, *args, **kwargs):
+
+        product_id = kwargs.get('product_id')
+        customer_id = request.user.id
+
+        try:
+            product = Product.objects.get(id=product_id)
+        except Product.DoesNotExist:
+            return Response({'error': 'Товар не найден'}, status=status.HTTP_404_NOT_FOUND)
+
+        cart_item = CartItem.objects.filter(
+            customer_id=customer_id,
+            product_id=product_id
+        ).first()
+
+        if not cart_item:
+            return Response({'error': 'Товара нет в корзине'}, status=status.HTTP_400_BAD_REQUEST)
+
+        cart_item.delete()
+
+        return Response(
+            {'message': 'Товар успешно удалён из корзины'},
+            status=status.HTTP_204_NO_CONTENT
+        )
+
+
+class OrderStatusesAPIList(generics.ListAPIView):
+    serializer_class = OrderStatusesSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        return OrderStatus.objects.all()
+
+
+class DeliveryStatusesAPIList(generics.ListAPIView):
+    serializer_class = OrderStatusesSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        return OrderStatus.objects.all()
+
+
+class CartAPIChangeQtyItem(generics.UpdateAPIView):
+    serializer_class = CartSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+
+    #
+    def get_queryset(self):
+        return CartItem.objects.filter(
+            customer=Customer.objects.get(user=self.request.user))
+
+    def patch(self, request, *args, **kwargs):
+
+        product_id = request.data.get('product_id')
+        is_increment = request.data.get('is_increment')
+        customer_id = request.user.id
+
+        product = None
+        try:
+            product = Product.objects.get(id=product_id)
+        except Product.DoesNotExist:
+            return Response({'error': 'Товар не найден'}, status=status.HTTP_404_NOT_FOUND)
+
+        cart_item = CartItem.objects.filter(
+            customer_id=customer_id,
+            product_id=product_id
+        ).first()
+
+        if is_increment is True:
+            if product.quantity <= 0:
+                return Response({'error': 'Товара недостаточно на складе!'}, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                cart_item.qty += 1
+                cart_item.save()
+        else:
+            if cart_item.qty - 1 <= 0:
+                cart_item_deleted = deepcopy(cart_item)
+                cart_item_deleted.qty = 0
+                cart_item.delete()
+                serializer = CartSerializer(cart_item_deleted)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+                # return Response({'error': 'Нельзя назначить кол-во меньше нуля для позиции корзины!'}, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                cart_item.qty -= 1
+                cart_item.save()
+
+        serializer = CartSerializer(cart_item)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class OrderAPICreate(generics.CreateAPIView):
+    serializer_class = OrderSerializer
+    pagination_class = CustomPagination
+    permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+
+    def get_queryset(self):
+        return Order.objects.filter(
+            customer=Customer.objects.get(user=self.request.user))
+
+    def post(self, request, *args, **kwargs):
+
+        customer_id = request.user.id
+
+        cart_items = CartItem.objects.filter(
+            customer=Customer.objects.get(user=self.request.user))
+
+        delivery_address = request.data.get('deliveryAddress')
+        delivery_contact = request.data.get('deliveryContact')
+        delivery_name = request.data.get('deliveryName')
+        delivery_comment = request.data.get('deliveryComment')
+
+        total_cost = request.data.get('totalPrice')
+        is_paid = request.data.get('isOrderPaid')
+
+        # try:
+        #     product = Product.objects.get(id=product_id)
+        # except Product.DoesNotExist:
+        #     return Response({'error': 'Товар не найден'}, status=status.HTTP_404_NOT_FOUND)
+
+        # cart_item = CartItem.objects.filter(
+        #     customer_id=customer_id,
+        #     product_id=product_id
+        # ).first()
+
+        # if cart_item:
+        #     return Response({'error': 'Товар уже в корзине'}, status=status.HTTP_400_BAD_REQUEST)
+
+        new_order = Order.objects.create(
+            customer_id=customer_id,
+            order_status=OrderStatus.objects.get(pk=1),
+            delivery_status=DeliveryStatus.objects.get(pk=1),
+            delivery_address=delivery_address,
+            delivery_contact=delivery_contact,
+            delivery_name=delivery_name,
+            delivery_comment=delivery_comment,
+            total_cost=total_cost,
+            is_paid=is_paid,
+        )
+
+        if is_paid is True:
+            shop = Shop.objects.get(id=1)
+            shop.balance += new_order.total_cost
+            shop.save()
+
+        # products = request.data.get('products')
+
+        for item in cart_items:
+            item.delete()
+
+        serializer = OrderSerializer(new_order)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class OrdersAPIList(generics.ListAPIView):
+    serializer_class = OrderSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_staff or user.is_superuser:
+            return Order.objects.all()
+        return Order.objects.filter(
+            customer=Customer.objects.get(user=user))
