@@ -8,7 +8,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView, \
     TokenRefreshView, TokenVerifyView, TokenBlacklistView
 
-from mockapi.serializers import UserRegistrationSerializer
+from mockapi.my_serializers.user import UserRegistrationSerializer
 
 
 # Create your views here.
