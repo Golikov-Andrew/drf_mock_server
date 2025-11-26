@@ -6,6 +6,7 @@ from rest_framework import serializers
 from .models.cart_item import CartItem
 from .models.customer import Customer
 from .models.order import Order
+from .models.order_item import OrderItem
 from .models.product import Product
 from .models.shop import Shop
 from .models.statuses import OrderStatus, DeliveryStatus
@@ -28,6 +29,19 @@ class DefaultValueSerializerMixin:
 
 class ProductSerializer(DefaultValueSerializerMixin,
                         serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+
+    def get_image_url(self, obj):
+        request = self.context.get('request')
+
+        if obj.image_url:
+            if request:
+                return request.build_absolute_uri(obj.image_url.url)
+            else:
+                return obj.image_url.url
+
+        return None
+
     class Meta:
         model = Product
         # read_only_fields = ('owner',)
@@ -141,7 +155,12 @@ class ShopSerializer(DefaultValueSerializerMixin,
 
 class WishListSerializer(DefaultValueSerializerMixin,
                          serializers.ModelSerializer):
-    product = ProductSerializer(read_only=True)
+    # product = ProductSerializer(read_only=True)
+    product = serializers.SerializerMethodField()
+
+    def get_product(self, obj):
+        serializer = ProductSerializer(obj.product, context=self.context)
+        return serializer.data
 
     class Meta:
         model = WishListItem
@@ -197,6 +216,32 @@ class OrderSerializer(DefaultValueSerializerMixin,
         if obj.updated_at:
             return DateFormat(obj.updated_at).format('Y-m-d H:i')
         return None
+
+    class Meta:
+        model = Order
+        fields = '__all__'
+
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    product = serializers.SerializerMethodField()
+
+    def get_product(self, obj):
+        serializer = ProductSerializer(obj.product, context=self.context)
+        return serializer.data
+
+    class Meta:
+        model = OrderItem
+        fields = '__all__'
+
+
+class OrderDetailsSerializer(OrderSerializer):
+    order_items = serializers.SerializerMethodField()
+
+    def get_order_items(self, obj):
+        items = OrderItem.objects.filter(order=obj)
+        return OrderItemSerializer(items, many=True, context=self.context).data
+
+
 
     class Meta:
         model = Order

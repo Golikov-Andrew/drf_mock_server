@@ -59,11 +59,12 @@ urlpatterns = [
 
     path('cart/product/change-qty/', api.CartAPIChangeQtyItem.as_view(),
          name='cart_product_change_qty'),
+    path('shop-admin/product/change-qty/', api.AdminProductAPIChangeQty.as_view(),
+         name='admin_product_change_qty'),
 
     path('order/create/', api.OrderAPICreate.as_view(), name="order_create"),
-    path('orders/list/', api.OrdersAPIList.as_view(), name="orders_list")
-
-    # path('cart/product/remove/<int:product_id>/', api.CartAPIRemoveProduct.as_view(),
-    #      name='cart_product_remove'),
+    path('orders/list/', api.OrdersAPIList.as_view(), name="orders_list"),
+    path('shop-admin/orders/list/', api.OrdersAdminAPIList.as_view(), name="admin_orders_list"),
+    path('order/details/<int:pk>/', api.OrderAPIDetails.as_view(), name="order_details")
 
 ]
